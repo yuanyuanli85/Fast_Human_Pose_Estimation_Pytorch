@@ -3,8 +3,8 @@
 This ia an unoffical implemention for paper [Fast Human Pose Estimation, Feng Zhang, Xiatian Zhu, Mao Ye](https://arxiv.org/abs/1811.05419). 
 Most of code comes from pytorch implementation for stacked hourglass network [pytorch-pose](https://github.com/bearpaw/pytorch-pose).
 In this repo, we followed Fast Pose Distillation approach proposed by Fast Human Pose Estimation to improve accuracy of a lightweight network. We first trained a deep 
-teacher network (stacks=8, standard convolution, 88.33@Mpii pckh), and used it to teach a student network (stacks=2, depthwise convolution, 84.69%@Mpii pckh).
-Our experiment shows 0.7% gain from knowledge distillation.
+teacher network (stacks=8, standard convolution, **88.33**@Mpii pckh), and used it to teach a student network (stacks=2, depthwise convolution, **84.69%**@Mpii pckh).
+Our experiment shows **0.7%** gain from knowledge distillation.
 
 
 ## Results 
@@ -20,7 +20,7 @@ Our experiment shows 0.7% gain from knowledge distillation.
 ## Installation
 1. Create a virtualenv
    ```
-   virtualenv -p /usr/bin/python2.7 posevenv
+   virtualenv -p /usr/bin/python2.7 pose_venv
    ```
 2. Install all dependencies in virtualenv
     ```
@@ -53,7 +53,7 @@ python tools/mpii.py -a hg --stacks 8 --blocks 1 --checkpoint checkpoint/hg_s8_b
 
 ## Training with Knowledge Distillation 
 
-* Download teacher model's checkpoint or you can train from scratch. In our experiments, we used hg_s8_b1 [GoogleDrive](xxx) as teacher.  
+* Download teacher model's checkpoint or you can train from scratch. In our experiments, we used `hg_s8_b1` as teacher.  
 
 * Train student network with knowledge distillation from teacher 
 ```sh
