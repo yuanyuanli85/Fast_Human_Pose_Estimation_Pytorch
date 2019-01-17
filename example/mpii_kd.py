@@ -118,7 +118,7 @@ def main(args):
             val_loader.dataset.sigma *=  args.sigma_decay
 
         # train for one epoch
-        train_loss, train_acc = train(train_loader, model, tmodel, criterion, optimizer, args.debug, args.flip)
+        train_loss, train_acc = train(train_loader, model, tmodel, criterion, optimizer, args.kdloss_alpha, args.debug, args.flip)
 
         # evaluate on validation set
         valid_loss, valid_acc, predictions = validate(val_loader, model, criterion, args.num_classes,
@@ -143,7 +143,7 @@ def main(args):
     savefig(os.path.join(args.checkpoint, 'log.eps'))
 
 
-def train(train_loader, model, tmodel, criterion, optimizer, debug=False, flip=True):
+def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug=False, flip=True):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -178,13 +178,12 @@ def train(train_loader, model, tmodel, criterion, optimizer, debug=False, flip=T
         for j in range(1, len(output)):
             gtloss += criterion(output[j], target_var)
 
-        # student vs teacher
+        # loss from teacher, student vs teacher
         tsloss = criterion(output[0], toutput)
         for j in range(1, len(output)):
             tsloss += criterion(output[j], toutput)
 
-        alpha = 0.5
-        total_loss = alpha * tsloss + (1 - alpha)*gtloss
+        total_loss = kdloss_alpha * tsloss + (1 - kdloss_alpha)*gtloss
 
         acc = accuracy(score_map, target, idx)
 
@@ -279,8 +278,6 @@ def validate(val_loader, model, criterion, num_classes, out_res, debug=False, fl
             flip_output_var = model(flip_input_var)
             flip_output = flip_back(flip_output_var[-1].data.cpu())
             score_map += flip_output
-
-
 
         loss = 0
         for o in output:
@@ -387,6 +384,9 @@ if __name__ == '__main__':
                         help='teacher network')
     parser.add_argument('--teacher_stack', default=8, type=int,
                         help='teacher network stack')
+    parser.add_argument('--kdloss_alpha', default=0.5, type=float,
+                        help='weight of kdloss')
+
     # Miscs
     parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
                         help='path to save checkpoint (default: checkpoint)')
