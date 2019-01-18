@@ -25,6 +25,8 @@ class Mpii(data.Dataset):
         self.scale_factor = scale_factor
         self.rot_factor = rot_factor
         self.label_type = label_type
+        self.unlabeled_folder = './data/unlabeled'
+        self.unlabeled_sample_limit = 5000
 
         # create train/val split
         with open(jsonfile) as anno_file:   
@@ -36,7 +38,25 @@ class Mpii(data.Dataset):
                 self.valid.append(idx)
             else:
                 self.train.append(idx)
+
+        if self.is_train:
+            self._load_unlabeled_anno(self.unlabeled_sample_limit)
         self.mean, self.std = self._compute_mean()
+
+    def _load_unlabeled_anno(self, limit):
+        def create_anno_unlabeled(imgfile):
+            anno = dict()
+            anno['img_paths'] = imgfile
+            anno['dataset'] = 'unlabeled'
+            return anno
+
+        assert (self.train), 'only supported for training dataset'
+        train_size = len(self.anno)
+        for i, mfile in enumerate(os.listdir(self.unlabeled_folder)):
+            if i > self.unlabeled_sample_limit:
+                break
+            self.anno.append(create_anno_unlabeled(mfile))
+            self.train.append(i+train_size)
 
     def _compute_mean(self):
         meanstd_file = './data/mpii/mean.pth.tar'
@@ -65,6 +85,50 @@ class Mpii(data.Dataset):
         return meanstd['mean'], meanstd['std']
 
     def __getitem__(self, index):
+        if self.is_train:
+            a = self.anno[self.train[index]]
+        else:
+            a = self.anno[self.valid[index]]
+
+        if a['dataset'] == 'MPI':
+            return self.__getitem_mpi__(index)
+        else:
+            return self.__getitem_unlabeled__(index)
+
+
+    def __getitem_unlabeled__(self, index):
+
+        assert self.is_train, "unlabled data only used in train mode"
+
+        a = self.anno[self.train[index]]
+
+        img_path = os.path.join(self.unlabeled_folder, a['img_paths'])
+        img = load_image(img_path)  # CxHxW
+
+        # Flip
+        if random.random() <= 0.5:
+            img = torch.from_numpy(fliplr(img.numpy())).float()
+
+        # Color
+        img[0, :, :].mul_(random.uniform(0.8, 1.2)).clamp_(0, 1)
+        img[1, :, :].mul_(random.uniform(0.8, 1.2)).clamp_(0, 1)
+        img[2, :, :].mul_(random.uniform(0.8, 1.2)).clamp_(0, 1)
+
+        # Prepare image and groundtruth map
+        inp = im_to_torch(scipy.misc.imresize(img, [self.inp_res, self.inp_res]))
+        inp = color_normalize(inp, self.mean, self.std)
+
+        # target
+        target = torch.zeros(16, self.out_res, self.out_res)
+
+        # meta
+        pts = torch.Tensor(16,3)
+        tpts = pts.clone()
+        meta = {'index' : index, 'gtmask': torch.tensor(0.0), 'center' : torch.Tensor(2), 'scale' : torch.tensor(1.0), 'pts' : pts, 'tpts' : tpts}
+
+        return inp, target, meta
+
+    def __getitem_mpi__(self, index):
         sf = self.scale_factor
         rf = self.rot_factor
         if self.is_train:
@@ -119,8 +183,7 @@ class Mpii(data.Dataset):
                 target[i] = draw_labelmap(target[i], tpts[i]-1, self.sigma, type=self.label_type)
 
         # Meta info
-        meta = {'index' : index, 'center' : c, 'scale' : s, 
-        'pts' : pts, 'tpts' : tpts}
+        meta = {'index' : index, 'gtmask': torch.tensor(1.0), 'center' : c, 'scale' : s, 'pts' : pts, 'tpts' : tpts}
 
         return inp, target, meta
 

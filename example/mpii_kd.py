@@ -143,6 +143,17 @@ def main(args):
     savefig(os.path.join(args.checkpoint, 'log.eps'))
 
 
+
+def loss_with_mask(criterion, predict, target, mask):
+    predict_x = predict.permute(1, 2, 3, 0)
+    predict_x = predict_x * mask
+    predict_x = predict_x.permute(3, 0, 1, 2)
+
+    loss = criterion(predict_x, target)
+    return loss
+
+
+
 def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug=False, flip=True):
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -174,9 +185,11 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
         toutput = toutput[-1].detach()
 
         # lmse : student vs ground truth
-        gtloss = criterion(output[0], target_var)
-        for j in range(1, len(output)):
-            gtloss += criterion(output[j], target_var)
+        # gtmask will filter out the samples without ground truth
+        gtloss = 0.0
+        gtmask = meta['gtmask'].cuda()
+        for j in range(0, len(output)):
+            gtloss += loss_with_mask(criterion, output[j], target_var, gtmask)
 
         # loss from teacher, student vs teacher
         tsloss = criterion(output[0], toutput)
