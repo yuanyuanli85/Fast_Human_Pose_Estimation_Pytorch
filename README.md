@@ -22,16 +22,15 @@ Our experiment shows **0.7%** gain from knowledge distillation.
    ```
    virtualenv -p /usr/bin/python2.7 pose_venv
    ```
-2. Install all dependencies in virtualenv
+2. Clone the repository with submodule
+```
+git clone --recursive https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation_Pytorch.git
+```
+3. Install all dependencies in virtualenv
     ```
     source posevenv/bin/activate
     pip install -r requirements.txt
     ```
-3. Clone the repository with submodule
-   ```
-   git clone https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation_Pytorch.git
-   ```
-
 4. Create a symbolic link to the `images` directory of the MPII dataset:
    ```
    ln -s PATH_TO_MPII_IMAGES_DIR data/mpii/images
