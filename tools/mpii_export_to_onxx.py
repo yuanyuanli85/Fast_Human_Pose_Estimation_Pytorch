@@ -3,22 +3,15 @@ from __future__ import print_function, absolute_import
 import argparse
 import torch
 import torch.nn.parallel
-import torch.backends.cudnn as cudnn
 import torch.optim
-
-from pose.utils.logger import Logger, savefig
-from pose.utils.osutils import mkdir_p, isfile, isdir, join
 import pose.models as models
+import os
 
 model_names = sorted(name for name in models.__dict__
                      if name.islower() and not name.startswith("__")
                      and callable(models.__dict__[name]))
 
 def main(args):
-
-    # create checkpoint dir
-    if not isdir(args.checkpoint):
-        mkdir_p(args.checkpoint)
 
     # create model
     print("==> creating model '{}', stacks={}, blocks={}".format(args.arch, args.stacks, args.blocks))
@@ -29,9 +22,9 @@ def main(args):
     # optionally resume from a checkpoint
     title = 'mpii-' + args.arch
     if args.checkpoint:
-        if isfile(args.checkpoint):
+        if os.path.isfile(args.checkpoint):
             print("=> loading checkpoint '{}'".format(args.checkpoint))
-            checkpoint = torch.load(args.checkpoint)
+            checkpoint = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
             args.start_epoch = checkpoint['epoch']
 
             # create new OrderedDict that does not contain `module.`
@@ -48,11 +41,7 @@ def main(args):
         else:
             print("=> no checkpoint found at '{}'".format(args.checkpoint))
     else:
-        logger = Logger(join(args.checkpoint, 'log.txt'), title=title)
-        logger.set_names(['Epoch', 'LR', 'Train Loss', 'Val Loss', 'Train Acc', 'Val Acc'])
-
-    cudnn.benchmark = True
-    print('    Total params: %.2fM' % (sum(p.numel() for p in model.parameters()) / 1000000.0))
+        print("=> no checkpoint found at '{}'".format(args.checkpoint))
 
     dummy_input = torch.randn(1, 3, args.in_res, args.in_res)
     torch.onnx.export(model, dummy_input, args.out_onnx)
