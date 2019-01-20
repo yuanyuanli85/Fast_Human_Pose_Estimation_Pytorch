@@ -1,10 +1,13 @@
 # Fast Human Pose Estimation Pytorch
 
 This ia an unoffical implemention for paper [Fast Human Pose Estimation, Feng Zhang, Xiatian Zhu, Mao Ye](https://arxiv.org/abs/1811.05419). 
-Most of code comes from pytorch implementation for stacked hourglass network [pytorch-pose](https://github.com/bearpaw/pytorch-pose).
+Most of code comes from pytorch implementation for stacked hourglass network [pytorch-pose](https://github.com/bearpaw/pytorch-pose).  
+
 In this repo, we followed Fast Pose Distillation approach proposed by Fast Human Pose Estimation to improve accuracy of a lightweight network. We first trained a deep 
 teacher network (stacks=8, standard convolution, **88.33**@Mpii pckh), and used it to teach a student network (stacks=2, depthwise convolution, **84.69%**@Mpii pckh).
-Our experiment shows **0.7%** gain from knowledge distillation.
+Our experiment shows **0.7%** gain from knowledge distillation.  
+
+I benchmarked the light student model `hg_s2_b1_mobile_fpd` and got **43fps** on **i7-8700K** via **OpenVino**. Details can be found from [Fast_Stacked_Hourglass_Network_OpenVino](https://github.com/yuanyuanli85/Fast_Stacked_Hourglass_Network_OpenVino)
 
 
 ## Results 
@@ -79,5 +82,8 @@ Here
 * `--checkpoint` is the checkpoint want to export 
 * `--out_onnx` is the exported onnx file
 
-
+## Reference 
+* OpenVino: https://github.com/opencv/dldt
+* Pytorch-pose: https://github.com/yuanyuanli85/pytorch-pose
+* Fast Human Pose Estimation https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation_Pytorch
 
