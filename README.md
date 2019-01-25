@@ -43,6 +43,16 @@ git clone --recursive https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation
     ```
     sed -i "1194s/torch\.backends\.cudnn\.enabled/False/g" ./pose_venv/lib/python2.7/site-packages/torch/nn/functional.py
     ```
+
+## Quick Demo
+* Download pre-trained model[hg_s2_b1_mobile_fpd](https://drive.google.com/open?id=1zFoecNCc7alND8ODh8lg3UeRaB6_gY_V)) and save it to somewhere, i.e `checkpoint/mpii_hg_s2_b1_mobile_fpd/`
+* Run demo on sample image
+```buildoutcfg
+python tools/mpii_demo.py -a hg -s 2 -b 1 --mobile True --checkpoint checkpoint/mpii_hg_s2_b1_mobile_fpd/model_best.pth.tar --in_res 256 --device cuda 
+```     
+* You will see the detected keypoints drawn on image on your screen
+    
+    
 ## Training teacher network 
 * In our experiments, we used stack=8 input resolution=256 as teacher network 
 ```sh
@@ -81,6 +91,7 @@ python tools/mpii_export_to_onxx.py -a hg -s 2 -b 1 --num-classes 16 --mobile Tr
 Here 
 * `--checkpoint` is the checkpoint want to export 
 * `--out_onnx` is the exported onnx file
+
 
 ## Reference 
 * OpenVino: https://github.com/opencv/dldt
