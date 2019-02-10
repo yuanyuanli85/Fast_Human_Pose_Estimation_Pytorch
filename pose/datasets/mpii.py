@@ -16,7 +16,7 @@ from pose.utils.transforms import *
 
 class Mpii(data.Dataset):
     def __init__(self, jsonfile, img_folder, inp_res=256, out_res=64, train=True, sigma=1,
-                 scale_factor=0.25, rot_factor=30, label_type='Gaussian'):
+                 scale_factor=0.25, rot_factor=30, label_type='Gaussian', unlabeled_folder=''):
         self.img_folder = img_folder    # root image folders
         self.is_train = train           # training set or test set
         self.inp_res = inp_res
@@ -25,8 +25,7 @@ class Mpii(data.Dataset):
         self.scale_factor = scale_factor
         self.rot_factor = rot_factor
         self.label_type = label_type
-        self.unlabeled_folder = './data/unlabeled'
-        self.unlabeled_sample_limit = 5000
+        self.unlabeled_folder = unlabeled_folder
 
         # create train/val split
         with open(jsonfile) as anno_file:   
@@ -39,11 +38,11 @@ class Mpii(data.Dataset):
             else:
                 self.train.append(idx)
 
-        if self.is_train:
-            self._load_unlabeled_anno(self.unlabeled_sample_limit)
+        if self.is_train and os.path.exists(self.unlabeled_folder):
+            self._load_unlabeled_anno()
         self.mean, self.std = self._compute_mean()
 
-    def _load_unlabeled_anno(self, limit):
+    def _load_unlabeled_anno(self):
         def create_anno_unlabeled(imgfile):
             anno = dict()
             anno['img_paths'] = imgfile
@@ -53,8 +52,6 @@ class Mpii(data.Dataset):
         assert (self.train), 'only supported for training dataset'
         train_size = len(self.anno)
         for i, mfile in enumerate(os.listdir(self.unlabeled_folder)):
-            if i > self.unlabeled_sample_limit:
-                break
             self.anno.append(create_anno_unlabeled(mfile))
             self.train.append(i+train_size)
 
