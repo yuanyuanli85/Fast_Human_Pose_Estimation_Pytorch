@@ -90,6 +90,7 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(
         datasets.Mpii('data/mpii/mpii_annotations.json', 'data/mpii/images',
                       sigma=args.sigma, label_type=args.label_type,
+                      unlabeled_folder=args.unlabeled_data,
                       inp_res=args.in_res, out_res=args.in_res//4),
         batch_size=args.train_batch, shuffle=True,
         num_workers=args.workers, pin_memory=True)
