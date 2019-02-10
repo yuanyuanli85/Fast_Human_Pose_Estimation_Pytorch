@@ -55,6 +55,8 @@ class Mpii(data.Dataset):
             self.anno.append(create_anno_unlabeled(mfile))
             self.train.append(i+train_size)
 
+        self.mean, self.std = self._compute_mean()
+
     def _compute_mean(self):
         meanstd_file = './data/mpii/mean.pth.tar'
         if isfile(meanstd_file):

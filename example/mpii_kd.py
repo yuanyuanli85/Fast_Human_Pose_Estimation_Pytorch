@@ -89,7 +89,7 @@ def main(args):
     # Data loading code
     train_loader = torch.utils.data.DataLoader(
         datasets.Mpii('data/mpii/mpii_annotations.json', 'data/mpii/images',
-                      sigma=args.sigma, label_type=args.label_type, unlabeled_folder=args.unlabeled_data,
+                      sigma=args.sigma, label_type=args.label_type,
                       inp_res=args.in_res, out_res=args.in_res//4),
         batch_size=args.train_batch, shuffle=True,
         num_workers=args.workers, pin_memory=True)
@@ -167,6 +167,7 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
     losses = AverageMeter()
     kdlosses = AverageMeter()
     unkdlosses = AverageMeter()
+    tslosses = AverageMeter()
     gtlosses = AverageMeter()
     acces = AverageMeter()
 
@@ -216,6 +217,16 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
 
         loss_labeled = kdloss_alpha * (kdloss) + (1 - kdloss_alpha)*gtloss
         total_loss   = loss_labeled + unkdloss_alpha * kdloss_unlabeled
+        gtloss = criterion(output[0], target_var)
+        for j in range(1, len(output)):
+            gtloss += criterion(output[j], target_var)
+
+        # loss from teacher, student vs teacher
+        tsloss = criterion(output[0], toutput)
+        for j in range(1, len(output)):
+            tsloss += criterion(output[j], toutput)
+
+        total_loss = kdloss_alpha * tsloss + (1 - kdloss_alpha)*gtloss
 
         acc = accuracy(score_map, target, idx)
 
@@ -244,6 +255,7 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
         gtlosses.update(gtloss.item(), inputs.size(0))
         kdlosses.update(kdloss.item(), inputs.size(0))
         unkdlosses.update(kdloss_unlabeled.item(), inputs.size(0))
+        tslosses.update(tsloss.item(), inputs.size(0))
         losses.update(total_loss.item(), inputs.size(0))
         acces.update(acc[0], inputs.size(0))
 
@@ -268,6 +280,7 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
                     loss=losses.avg,
                     kdloss=kdlosses.avg,
                     unkdloss=unkdlosses.avg,
+                    tsloss=tslosses.avg,
                     gtloss=gtlosses.avg,
                     acc=acces.avg
                     )
