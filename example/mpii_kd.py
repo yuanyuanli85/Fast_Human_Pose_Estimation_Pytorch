@@ -51,7 +51,7 @@ def main(args):
     tmodel = load_teacher_network(args.arch, args.teacher_stack, args.blocks, args.teacher_checkpoint)
 
     # create model
-    print("==> creating model '{}', stacks={}, blocks={}".format(args.arch, args.stacks, args.blocks))
+    print("==> creating student model '{}', stacks={}, blocks={}".format(args.arch, args.stacks, args.blocks))
     model = models.__dict__[args.arch](num_stacks=args.stacks, num_blocks=args.blocks, num_classes=args.num_classes, mobile=args.mobile)
 
     model = torch.nn.DataParallel(model).cuda()
@@ -90,6 +90,7 @@ def main(args):
     train_loader = torch.utils.data.DataLoader(
         datasets.Mpii('data/mpii/mpii_annotations.json', 'data/mpii/images',
                       sigma=args.sigma, label_type=args.label_type,
+                      unlabeled_folder=args.unlabeled_data,
                       inp_res=args.in_res, out_res=args.in_res//4),
         batch_size=args.train_batch, shuffle=True,
         num_workers=args.workers, pin_memory=True)
@@ -100,6 +101,13 @@ def main(args):
                       inp_res=args.in_res, out_res=args.in_res // 4),
         batch_size=args.test_batch, shuffle=False,
         num_workers=args.workers, pin_memory=True)
+
+    if os.path.exists(args.unlabeled_data):
+        print("==> loading training data from mpii {}, unlabeled data {}, val data {}".format(
+                train_loader.dataset.__len__(), len(os.listdir(args.unlabeled_data)), val_loader.dataset.__len__()))
+    else:
+        print("==> loading training data from mpii {}, unlabeled data {}, val data {}".format(
+                train_loader.dataset.__len__(), 0, val_loader.dataset.__len__()))
 
     if args.evaluate:
         print('\nEvaluation only') 
@@ -143,10 +151,23 @@ def main(args):
     savefig(os.path.join(args.checkpoint, 'log.eps'))
 
 
+
+def loss_with_mask(criterion, predict, target, mask):
+    predict_x = predict.permute(1, 2, 3, 0)
+    predict_x = predict_x * mask
+    predict_x = predict_x.permute(3, 0, 1, 2)
+
+    loss = criterion(predict_x, target)
+    return loss
+
+
+
 def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug=False, flip=True):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+    kdlosses = AverageMeter()
+    unkdlosses = AverageMeter()
     tslosses = AverageMeter()
     gtlosses = AverageMeter()
     acces = AverageMeter()
@@ -174,6 +195,29 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
         toutput = toutput[-1].detach()
 
         # lmse : student vs ground truth
+        # gtmask will filter out the samples without ground truth
+        gtloss = torch.tensor(0.0).cuda()
+        kdloss = torch.tensor(0.0).cuda()
+        kdloss_unlabeled = torch.tensor(0.0).cuda()
+        unkdloss_alpha = 1.0
+        gtmask = meta['gtmask']
+
+        train_batch = score_map.shape[0]
+
+        for j in range(0, len(output)):
+            _output = output[j]
+            for i in range(gtmask.shape[0]):
+                if gtmask[i] < 0.1:
+                    # unlabeled data, gtmask=0.0, kdloss only
+                    # need to dividen train_batch to keep number equal
+                    kdloss_unlabeled += criterion(_output[i,:,:,:], toutput[i, :,:,:])/train_batch
+                else:
+                    # labeled data: kdloss + gtloss
+                    gtloss += criterion(_output[i,:,:,:], target_var[i, :,:,:])/train_batch
+                    kdloss += criterion(_output[i,:,:,:], toutput[i,:,:,:])/train_batch
+
+        loss_labeled = kdloss_alpha * (kdloss) + (1 - kdloss_alpha)*gtloss
+        total_loss   = loss_labeled + unkdloss_alpha * kdloss_unlabeled
         gtloss = criterion(output[0], target_var)
         for j in range(1, len(output)):
             gtloss += criterion(output[j], target_var)
@@ -210,6 +254,8 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
 
         # measure accuracy and record loss
         gtlosses.update(gtloss.item(), inputs.size(0))
+        kdlosses.update(kdloss.item(), inputs.size(0))
+        unkdlosses.update(kdloss_unlabeled.item(), inputs.size(0))
         tslosses.update(tsloss.item(), inputs.size(0))
         losses.update(total_loss.item(), inputs.size(0))
         acces.update(acc[0], inputs.size(0))
@@ -225,7 +271,7 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
 
         # plot progress
         bar.suffix  = '({batch}/{size}) Data: {data:.6f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} ' \
-                      '| Loss: {loss:.4f} | TsLoss:{tsloss:.4f}| GtLoss:{gtloss:.4f} | Acc: {acc: .4f}'.format(
+                      '| Loss: {loss:.6f} | KdLoss:{kdloss:.6f}| unKdLoss:{unkdloss:.6f}| GtLoss:{gtloss:.6f} | Acc: {acc: .4f}'.format(
                     batch=i + 1,
                     size=len(train_loader),
                     data=data_time.val,
@@ -233,6 +279,8 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
                     total=bar.elapsed_td,
                     eta=bar.eta_td,
                     loss=losses.avg,
+                    kdloss=kdlosses.avg,
+                    unkdloss=unkdlosses.avg,
                     tsloss=tslosses.avg,
                     gtloss=gtlosses.avg,
                     acc=acces.avg
@@ -386,6 +434,8 @@ if __name__ == '__main__':
                         help='teacher network stack')
     parser.add_argument('--kdloss_alpha', default=0.5, type=float,
                         help='weight of kdloss')
+    parser.add_argument('--unlabeled_data', default='', type=str,
+                        help='unlabeled data address')
 
     # Miscs
     parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
