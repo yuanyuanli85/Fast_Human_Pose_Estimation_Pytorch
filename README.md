@@ -9,15 +9,19 @@ Our experiment shows **0.7%** gain from knowledge distillation.
 
 I benchmarked the light student model `hg_s2_b1_mobile_fpd` and got **43fps** on **i7-8700K** via **OpenVino**. Details can be found from [Fast_Stacked_Hourglass_Network_OpenVino](https://github.com/yuanyuanli85/Fast_Stacked_Hourglass_Network_OpenVino)
 
+## Update at Feb 2019
+* Model trained by using extra unlabeled images uploaded, `hg_s2_b1_mobile_fpd_unlabeled`  shows **0.28%** extra gain from knowledge transfered from teacher on unlabeled data. 
+* The key idea is inserting unlabeled images into mpii dataset. For unlabeled samples, loss comes from difference b/w teacher and student. For labeled samples, loss is the sum of teacher-vs-student and student-vs-groundtruth.
 
 ## Results 
-`hg_s8_b1`: teacher model, `hg_s2_b1_mobile`:student model, `hg_s2_b1_mobile_kd`: student model trained with FPD.
+`hg_s8_b1`: teacher model, `hg_s2_b1_mobile`:student model, `hg_s2_b1_mobile_kd`: student model trained with FPD. `hg_s2_b1_mobile_fpd_unlabeled`: student model trained with FPD with extral unlabeled samples.
 
 | Model|in_res |featrues| # of Weights |Head|Shoulder|	Elbow|	Wrist|	Hip	|Knee|	Ankle|	Mean|Link|
 | --- |---| ----|----------- | ----| ----| ---| ---| ---| ---| ---| ---|----|
 | hg_s8_b1|256|128|25.59m| 96.59| 95.35| 89.38| 84.15| 88.70| 83.98 |79.59| 88.33|[GoogleDrive](https://drive.google.com/open?id=1yzR8UwhklJTMMJEtjK10oyYG1tVRtkqi)
 | hg_s2_b1_mobile|256|128|2.31m|95.80|  93.61| 85.50| 79.63| 86.13| 77.82| 73.62|  84.69|[GoogleDrive](https://drive.google.com/open?id=1FxTRhiw6_dS8X1jBBUw_bxHX6RoBJaJO)
 | hg_s2_b1_mobile_fpd|256|128|2.31m| 95.67|94.07| 86.31| 79.68| 86.00| 79.67|75.51| 85.41|[GoogleDrive](https://drive.google.com/open?id=1zFoecNCc7alND8ODh8lg3UeRaB6_gY_V)
+| hg_s2_b1_mobile_fpd_unlabeled|256|128|2.31m| 95.94|94.11| 87.18| 80.69| 87.03| 79.17|74.82| 85.69|[GoogleDrive](https://drive.google.com/open?id=1mSFD2cn8fMb1YQJPOjfU-RLVnYO1LoAl)
 
 
 ## Installation
@@ -26,9 +30,9 @@ I benchmarked the light student model `hg_s2_b1_mobile_fpd` and got **43fps** on
    virtualenv -p /usr/bin/python2.7 pose_venv
    ```
 2. Clone the repository with submodule
-```
-git clone --recursive https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation_Pytorch.git
-```
+    ```
+    git clone --recursive https://github.com/yuanyuanli85/Fast_Human_Pose_Estimation_Pytorch.git
+    ```
 3. Install all dependencies in virtualenv
     ```
     source posevenv/bin/activate
