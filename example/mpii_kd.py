@@ -218,16 +218,6 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
 
         loss_labeled = kdloss_alpha * (kdloss) + (1 - kdloss_alpha)*gtloss
         total_loss   = loss_labeled + unkdloss_alpha * kdloss_unlabeled
-        gtloss = criterion(output[0], target_var)
-        for j in range(1, len(output)):
-            gtloss += criterion(output[j], target_var)
-
-        # loss from teacher, student vs teacher
-        tsloss = criterion(output[0], toutput)
-        for j in range(1, len(output)):
-            tsloss += criterion(output[j], toutput)
-
-        total_loss = kdloss_alpha * tsloss + (1 - kdloss_alpha)*gtloss
 
         acc = accuracy(score_map, target, idx)
 
@@ -256,7 +246,6 @@ def train(train_loader, model, tmodel, criterion, optimizer, kdloss_alpha, debug
         gtlosses.update(gtloss.item(), inputs.size(0))
         kdlosses.update(kdloss.item(), inputs.size(0))
         unkdlosses.update(kdloss_unlabeled.item(), inputs.size(0))
-        tslosses.update(tsloss.item(), inputs.size(0))
         losses.update(total_loss.item(), inputs.size(0))
         acces.update(acc[0], inputs.size(0))
 
