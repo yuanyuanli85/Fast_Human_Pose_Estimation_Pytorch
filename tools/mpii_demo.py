@@ -48,6 +48,7 @@ def load_model(arch, stacks, blocks, num_classes, mobile, checkpoint_resume):
 
 def inference(model, image, device):
     input_tensor = torch.from_numpy(image).float().to(device)
+    model = model.to(device)
     output = model(input_tensor)
     output = output[-1]
     output = output.data.cpu()
