@@ -5,7 +5,7 @@ decorator==4.3.0
 functools32==3.2.3.post2
 matplotlib==2.0.2
 networkx==2.2
-numpy==1.15.4
+numpy==1.22.0
 Pillow==6.2.0
 pyparsing==2.3.0
 python-dateutil==2.7.5
